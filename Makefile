@@ -125,8 +125,8 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 
 .PHONY: build-installer
 build-installer: manifests ## Generate a consolidated YAML with CRDs and deployment.
-	mkdir -p dist
-	$(HELM) template --include-crds netbird-operator helm/netbird-operator > dist/install.yaml
+	mkdir -p manifests
+	$(HELM) template --include-crds netbird-operator helm/netbird-operator > manifests/install.yaml
 
 ##@ Deployment
 

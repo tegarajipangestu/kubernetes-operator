@@ -19,7 +19,7 @@ This operator enables easily provisioning NetBird access on kubernetes clusters,
 
 ```sh
 kubectl create namespace netbird
-kubectl apply -n netbird -f https://github.com/netbirdio/kubernetes-operator/releases/latest/dist/install.yaml
+kubectl apply -n netbird -f https://github.com/netbirdio/kubernetes-operator/releases/latest/manifests/install.yaml
 ```
 
 **Using the Helm Chart**
@@ -38,7 +38,7 @@ helm show values netbirdio/netbird-operator
 **Using install.yaml**
 
 ```sh
-kubectl delete -n netbird -f https://github.com/netbirdio/kubernetes-operator/releases/latest/dist/install.yaml
+kubectl delete -n netbird -f https://github.com/netbirdio/kubernetes-operator/releases/latest/manifests/install.yaml
 kubectl delete namespace netbird
 ```
 
