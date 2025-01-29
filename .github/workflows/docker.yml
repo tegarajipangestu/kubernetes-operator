@@ -39,6 +39,11 @@ jobs:
         with:
           fetch-depth: 0 # It is required for GoReleaser to work properly
 
+      - name: Install modules
+        run: go mod tidy
+
+      - name: check git status
+        run: git --no-pager diff --exit-code
       # Set up BuildKit Docker container builder to be able to build
       # multi-platform images and export cache
       # https://github.com/docker/setup-buildx-action
