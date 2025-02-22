@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,6 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
 )
 
 const (
@@ -62,22 +63,24 @@ var _ webhook.CustomDefaulter = &PodNetbirdInjector{}
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the Kind Pod.
 func (d *PodNetbirdInjector) Default(ctx context.Context, obj runtime.Object) error {
 	pod, ok := obj.(*corev1.Pod)
-
 	if !ok {
-		return fmt.Errorf("expected an Pod object but got %T", obj)
+		return fmt.Errorf("expected a Pod object but got %T", obj)
 	}
 	podlog.Info("Defaulting for Pod", "name", pod.GetName())
 
+	// if the setup key annotation is missing, do nothing.
 	if pod.Annotations == nil || pod.Annotations[setupKeyAnnotation] == "" {
 		return nil
 	}
 
+	// retrieve the NBSetupKey resource
 	var nbSetupKey netbirdiov1.NBSetupKey
 	err := d.client.Get(ctx, types.NamespacedName{Namespace: pod.Namespace, Name: pod.Annotations[setupKeyAnnotation]}, &nbSetupKey)
 	if err != nil {
 		return err
 	}
 
+	// ensure the NBSetupKey is ready.
 	ready := false
 	for _, c := range nbSetupKey.Status.Conditions {
 		if c.Type == netbirdiov1.Ready {
@@ -93,15 +96,26 @@ func (d *PodNetbirdInjector) Default(ctx context.Context, obj runtime.Object) er
 		managementURL = nbSetupKey.Spec.ManagementURL
 	}
 
+	// build the base arguments.
+	args := []string{
+		"--setup-key-file", "/etc/nbkey",
+		"-m", managementURL,
+	}
+
+	// check for extra DNS labels in annotations.
+	if pod.Annotations != nil {
+		if extra, ok := pod.Annotations["netbird.io/extra-dns-labels"]; ok && extra != "" {
+			podlog.Info("Found extra DNS labels", "extra", extra)
+			// append extra DNS labels to the CLI args.
+			args = append(args, "--extra-dns-labels", extra)
+		}
+	}
+
+	// Append the netbird container with the constructed args.
 	pod.Spec.Containers = append(pod.Spec.Containers, corev1.Container{
 		Name:  "netbird",
 		Image: d.clientImage,
-		Args: []string{
-			"--setup-key-file",
-			"/etc/nbkey",
-			"-m",
-			managementURL,
-		},
+		Args:  args,
 		Env: []corev1.EnvVar{
 			{
 				Name: "NB_SETUP_KEY",
@@ -116,9 +130,7 @@ func (d *PodNetbirdInjector) Default(ctx context.Context, obj runtime.Object) er
 		},
 		SecurityContext: &corev1.SecurityContext{
 			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{
-					"NET_ADMIN",
-				},
+				Add: []corev1.Capability{"NET_ADMIN"},
 			},
 		},
 	})
