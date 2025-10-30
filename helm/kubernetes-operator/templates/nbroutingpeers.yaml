@@ -2,6 +2,7 @@
 {{- if .Values.ingress.namespacedNetworks }}
 {{ $defaults := .Values.ingress.router }}
 {{ range $k, $v := .Values.ingress.router.namespaces }}
+{{ $spec := merge $defaults $v }}
 apiVersion: netbird.io/v1
 kind: NBRoutingPeer
 metadata:
@@ -10,9 +11,8 @@ metadata:
   labels:
     app.kubernetes.io/component: operator
     {{- include "kubernetes-operator.labels" $ | nindent 4 }}
-  name: router
+  name: {{ $spec.name | default "router" }}
   namespace: {{ $k }}
-{{ $spec := merge $defaults $v }}
 {{- if or (or (or $spec.replicas $spec.resources) (or $spec.labels $spec.annotations)) (or $spec.nodeSelector $spec.tolerations) }}
 spec:
   {{- if $spec.replicas }}
@@ -51,7 +51,7 @@ metadata:
   labels:
     app.kubernetes.io/component: operator
     {{- include "kubernetes-operator.labels" $ | nindent 4 }}
-  name: router
+  name: {{ .name | default "router" }}
 {{- if or (or (or .replicas .resources) (or .labels .annotations)) (or .nodeSelector .tolerations) }}
 spec:
   {{- if .replicas }}

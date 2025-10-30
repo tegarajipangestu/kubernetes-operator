@@ -150,6 +150,8 @@ ingress:
   router:
     # Deploy routing peer(s)
     enabled: false
+    # Custom name for the router deployment and pods (defaults to "router")
+    # name: router
     # replicas: 3
     # resources:
     #   requests:
